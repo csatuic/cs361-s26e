@@ -21,5 +21,8 @@ libchangecase.so: changecase.c
 dynamic: main.o uppercase.o lowercase.o libchangecase.so libupper.so liblower.so
 	gcc -fPIC ${CFLAGS} -L. -o $@ $^ -lchangecase
 
+%.o: %.c
+	$(CC) $(CFLAGS) -c $^ -o $@
+
 clean:
 	rm -f *.pre.c *.s *.o *.so static dynamic
