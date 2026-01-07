@@ -122,7 +122,7 @@ When you run ``make`` in the hw1 folder, several files are automatically created
 
 Read the Makefile to see how it works. The ``static`` target has three dependencies listed after the ``:``. For files that already exist, such as ``uppercase.c``, no further work is required. However, the file ``main.o`` is automatically built 
 from the ``main.s`` file, which is built from ``main.pre.c`` and so on. The
-lines below each target says how to build the target from the dependencies.
+lines below each target (called the "recipe") say how to build the target from the dependencies.
 
 ``make clean`` has no dependencies, and since no file named ``clean`` exists, it
 always runs, deleting a bunch of previously produced files. 
@@ -140,8 +140,12 @@ which commands it needs to re-run?
 
 There are several instances of unusual syntax in the Makefile: $^, $@, $< and ${CFLAGS}. Make sure you understand every detail of this example Makefile in its entirety. Ask a TA, your instructor, or your favorite AI for help if you need help.
 
-TIP: Something particularly tricky is going on with ``uppercase.o``, ``lowercase.o`` and ``changecase.o``. Try to google or AI your way to an explanation for how
-those dependencies got built. 
+Something else slightly unusual about Makefiles presents itself when we look at how a file like `uppercase.o` was built. There are no rules which directly target `uppercase.o`!
+However, you will find a rule with the funky syntax `%.o: %.c`. We definitely have no file called `%.o` that needs to be built from a file called `%.c`, and indeed, the `%` Makefile
+syntax here is a *wildcard*: this rule will build any otherwise-unmentioned `<something>.c` files into the files `<something>.o`.
+
+What happens if we remove that `%.o: %.c` rule entirely? It still builds just fine, but the output of `make` has changed! What's going on?
+**TIP**: Look into the `CC` and `CFLAGS` variables.
 
 ## Remaining step 8: from C to executable, step by step
 
