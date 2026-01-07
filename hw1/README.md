@@ -24,7 +24,9 @@ You will need access to a Linux machine to complete each assignment in this clas
 On your local machine, install an ssh client. On OS X, this is already available on the terminal. 
 On Windows, you might consider using Putty.
 
-Then, log in to `baz` using the ssh client. Use your regular UIC netid and password.
+* Then, log in to `baz` using the ssh client. Use your regular UIC netid and password.
+
+* Finally, enable passwordless login with ``ssh-keygen`` on your local machine, and ``ssh-copy-id`` to copy the public key to the Linux machine you're using.
 
 ### Local install (advanced option)
 
@@ -33,7 +35,8 @@ If you prefer a local Linux installation, you *must not* use "Windows Subsystem 
 Instead, use a full virtual machine (VMWare licenses are available for free), dual booting, or simply stick with Linux for everything on your laptop. 
 For the least trouble, use Ubuntu 24.04.3 LTS. 
 
-For lab credit, you must *demonstrate:* logging in to a Linux machine that is not running on WSL, either via ssh or locally.   
+
+For lab credit, you must *demonstrate:* logging in to a Linux machine that is not running on WSL, either via ssh or locally, without typing in a password.
 
 ## Lab preliminary step 2: Prepare a code Editor
 
@@ -56,8 +59,6 @@ Most people use vim because they don't know better. Some people do it despite kn
 *Demonstrate:* given this file, replace three instances of the string "ing" with "ING" using a single command. That is, you may not use the command three times. Then, insert a copy of the third line of this file, at line 40, using a command, not the arrow keys.
 
 ## Lab step 3: clone the hw1 github repo, build and run your first program
-
-* First, enable passwordless login with ``ssh-keygen`` on your local machine, and ``ssh-copy-id`` to copy the public key to the Linux machine you're using.
 
 All future steps assume you are working with your preferred editor, and running commands in your Linux environment via ssh. 
 
@@ -179,6 +180,6 @@ As you noticed in steps 5 and 6, shared libraries can be replaced at runtime. In
 
 * use ``objdump -d dynamic`` to observe the difference between the call to the dynamically linked ``changecase``, and the statically linked ``lowercase``. 
 The ``lowercase`` call goes straight to 1262, the address of ``lowercase``. 
+But where does the ``changecase`` call go? It also has a fixed address...
 
-
-
+See how far you can track this. 
