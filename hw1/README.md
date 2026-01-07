@@ -4,9 +4,10 @@ Every assignment in this course has two parts: an initial part, which may be com
 
 The due date of the assignment is provided on Piazza and in lecture, but is generally before the start of class, one week after the assignment was presented in class. There is no way to submit
 a solution for grading - instead you will be evaluated on your understanding of the topics covered
-by the assignment during a brief in-class quiz on the due date. As a result, the focus of your effort should not be on "completing" the assignment, but on fully understanding what you are doing, while completing it. 
+by the assignment during a brief in-class quiz on the due date. As a result, the focus of your effort should not be on "completing" the assignment, but on figuring out and fully understanding what you are doing and why, while completing it. 
 
-Feel free to work in groups, consult AI tools, or any other means at your disposal to better learn the material and prepare for the in-class quiz. 
+Feel free to work in groups, consult AI tools, or any other means at your disposal to better learn the material and prepare for the in-class quiz. Also, feel free to attend more than one lab - because some students choose to not attend labs, there is often
+spare capacity for those who need a little extra. 
 
 # Homework 1: Preprocessing, Compiling, Assembling, Linking and Loading
 
@@ -16,14 +17,14 @@ The ``.o`` files are then linked to create an executable.
 
 ## Lab preliminary step 1: Linux Machine
 
-You will need access to a Linux machine to complete each assignment in this class. The server ``baz`` is available for you to log into, or you may use your local Linux installation if you prefer. 
+You will need access to a Linux machine to complete each assignment in this class. The server ``baz.cs.uic.edu`` is available for you to log into, or you may use your local Linux installation if you prefer. 
 
-### Remote server access via SSH (recommended)
+### Remote server (`baz`) access via SSH (recommended)
 
 On your local machine, install an ssh client. On OS X, this is already available on the terminal. 
 On Windows, you might consider using Putty.
 
-Then, log in to the Linux server using the ssh client. 
+Then, log in to `baz` using the ssh client. Use your regular UIC netid and password.
 
 ### Local install (advanced option)
 
