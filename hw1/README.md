@@ -64,7 +64,7 @@ All future steps assume you are working with your preferred editor, and running 
 * Now use ``git`` to clone the hw1 repository, run ``make static`` in the folder, then ``./static`` to run the first program. 
 
 It should print a few variations of ``Hello World!``. The ``./`` in ``./static`` says "look for the program in the current folder, 
-not in the search path ($PATH)". 
+not in the search path ($$PATH)". 
 
 *Demonstrate:* If you are using a remote Linux machine, ssh to it without typing in
 a password. Then, cd to the hw1 folder and run `./static`.
@@ -138,7 +138,7 @@ Finally, the command ``touch`` updates the modification date of a file. Run ``to
 several ``gcc`` commands this time. What's different? How does ``make`` know
 which commands it needs to re-run?
 
-There are several instances of unusual syntax in the Makefile: $^, $@, $< and ${CFLAGS}. Make sure you understand every detail of this example Makefile in its entirety. Ask a TA, your instructor, or your favorite AI for help if you need help.
+There are several instances of unusual syntax in the Makefile: $$^, $$@, $$< and $${CFLAGS}. Make sure you understand every detail of this example Makefile in its entirety. Ask a TA, your instructor, or your favorite AI for help if you need help.
 
 Something else slightly unusual about Makefiles presents itself when we look at how a file like `uppercase.o` was built. There are no rules which directly target `uppercase.o`!
 However, you will find a rule with the funky syntax `%.o: %.c`. We definitely have no file called `%.o` that needs to be built from a file called `%.c`, and indeed, the `%` Makefile
