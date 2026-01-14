@@ -90,7 +90,7 @@ looks for libraries in the library search path ``LD_LIBRARY_PATH``.
 
 You should now see the same output as from ``./static``. 
 
-* Changing only the "recipe" part of the dynamic target, to update the library dependency, make the last line of output have the uppercase version again. 
+* Changing the dependencies and the "recipe" part of the dynamic target, to update the library dependency, make the last line of output have the uppercase version again. 
 
 This "statically" changes the program to depend on a different library. However, 
 dynamic library dependencies are actually loaded when the program runs. This means
