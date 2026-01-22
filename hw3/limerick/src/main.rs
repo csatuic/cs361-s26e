@@ -9,6 +9,8 @@ use std::time::Duration;
 use structopt::StructOpt;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
+use std::sync::*;
+use ctrlc;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "limerick-presenter", about = "Presents random limericks, optionally syllable-by-syllable in live mode.")]
@@ -21,9 +23,10 @@ struct Opt {
     #[structopt(short = "f", long = "file", parse(from_os_str))]
     file: Option<PathBuf>,
 
-make sure there is a bit of a pause before the file is written to
-    #[structopt(short = "o", long = "output")]
-    file: Option<PathBuf>
+    /// Output file containing limericks (default: limericks.txt)
+    #[structopt(short = "o", long = "outfile", parse(from_os_str))]
+    outfile: Option<PathBuf>,
+
 }
 
 fn load_limericks(path: PathBuf) -> io::Result<Vec<String>> {
@@ -52,44 +55,40 @@ fn load_limericks(path: PathBuf) -> io::Result<Vec<String>> {
     Ok(limericks)
 }
 
-fn present_limerick(limerick: &str) -> bool {
+fn present_limerick(write_to: &mut dyn Write, stop: &Arc<Mutex<bool>>, limerick: &str) {
     for line in limerick.lines() {
         let mut words = line.split_whitespace().peekable();
 
         while let Some(word) = words.next() {
             let cleaned = word.trim_matches(|c: char| !c.is_alphabetic() && c != '\'');
-            let syllables = if cleaned.is_empty() {
-                vec![]
-            } else {
-                hyphenate(cleaned, Lang::English).collect::<Vec<_>>()
-            };
+            if !cleaned.is_empty() {
+                for syllable in hyphenate(cleaned, Lang::English).collect::<Vec<_>>() {
+                    if *stop.lock().unwrap() == true {
+                        *stop.lock().unwrap() = false;
+                        return ;
+                    }
 
-            for syllable in syllables.iter() {
-                print!("{}",syllable);
-                io::stdout().flush().unwrap();
-                sleep(Duration::from_millis(200));
-            }
+                    write!(write_to,"{}",syllable);
+                    write_to.flush().unwrap();
+                    sleep(Duration::from_millis(200));                                
+                }
 
-            if words.peek().is_some() {
-                print!(" ");
-                io::stdout().flush().unwrap();
+                write!(write_to, " ");
+                write_to.flush().unwrap();
             }
         }
 
-        io::stdout().flush().unwrap();
+        write!(write_to, "\n");
+        write_to.flush().unwrap();
         sleep(Duration::from_millis(800));
-        println!("\r");
-
     }
-    println!("\r");
-
-    true
+    write!(write_to, "\n");
 }
 
 fn main() -> io::Result<()> {
     let opt = Opt::from_args();
+    println!("{:?}",opt);
     let filename = opt.file.unwrap_or_else(|| PathBuf::from("limericks.txt"));
-
     let limericks = load_limericks(filename)?;
 
     if limericks.is_empty() {
@@ -97,23 +96,35 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
 
-    let mut rng = rand::thread_rng();
+    let stop = Arc::new(Mutex::new(false));
+    let alsostop = stop.clone();
+    ctrlc::set_handler(move || {
+        println!("Eh-hrm...");
+        *alsostop.lock().unwrap()=true;
+    }).expect("Error setting Ctrl-C handler");
 
+    let mut outfile;
+    let writer : &mut dyn Write = 
+    if let Some(name) = &opt.outfile {
+        sleep(Duration::from_millis(1000));
+        outfile = File::create(name).unwrap();
+        &mut outfile
+    }
+    else {
+        &mut io::stdout()
+    };
+
+    let mut rng = rand::thread_rng();
     if !opt.live {
         let chosen = limericks.choose(&mut rng).unwrap();
-        println!("{}", chosen);
+        write!(writer, "{}\n", chosen);
         return Ok(());
     }
 
     loop {
         let chosen = limericks.choose(&mut rng).unwrap();
+        present_limerick(writer, &stop, chosen);
 
-        if present_limerick(chosen) {
-           sleep(Duration::from_millis(1000));
-        }
-        else {
-            break;
-        }
     }
 
     Ok(())
