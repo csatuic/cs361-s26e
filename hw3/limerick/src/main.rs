@@ -1,14 +1,11 @@
 use hypher::{hyphenate, Lang};
 use rand::seq::SliceRandom;
-use std::env;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::Duration;
 use structopt::StructOpt;
-use termion::input::TermRead;
-use termion::raw::IntoRawMode;
 use std::sync::*;
 use ctrlc;
 
@@ -68,27 +65,27 @@ fn present_limerick(write_to: &mut dyn Write, stop: &Arc<Mutex<bool>>, limerick:
                         return ;
                     }
 
-                    write!(write_to,"{}",syllable);
+                    let _ = write!(write_to,"{}",syllable);
                     write_to.flush().unwrap();
                     sleep(Duration::from_millis(200));                                
                 }
 
-                write!(write_to, " ");
+                let _ = write!(write_to, " ");
                 write_to.flush().unwrap();
             }
         }
 
-        write!(write_to, "\n");
+        let _ = write!(write_to, "\n");
         write_to.flush().unwrap();
         sleep(Duration::from_millis(800));
     }
-    write!(write_to, "\n");
+    let _ = write!(write_to, "\n");
 }
 
 fn main() -> io::Result<()> {
     let opt = Opt::from_args();
-    println!("{:?}",opt);
     let filename = opt.file.unwrap_or_else(|| PathBuf::from("limericks.txt"));
+    assert!(filename.as_path().exists(),"Limerick file {filename:?} not found. Specify correct file path with -f. ");
     let limericks = load_limericks(filename)?;
 
     if limericks.is_empty() {
@@ -117,15 +114,12 @@ fn main() -> io::Result<()> {
     let mut rng = rand::thread_rng();
     if !opt.live {
         let chosen = limericks.choose(&mut rng).unwrap();
-        write!(writer, "{}\n", chosen);
+        let _ = write!(writer, "{}\n", chosen);
         return Ok(());
     }
 
     loop {
         let chosen = limericks.choose(&mut rng).unwrap();
         present_limerick(writer, &stop, chosen);
-
     }
-
-    Ok(())
 }

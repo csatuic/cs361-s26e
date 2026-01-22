@@ -18,8 +18,9 @@ Try it out, and see if you get one you like. If you know of a good one that's no
 
 As discussed in lecture, Unix processes are typically created by first `fork()` in the current process, which results in two near-identical copies of the original program. Then `exec()`, to replace the program image with a new program, while keeping file descriptors and process ID unmodified. 
 
-`fork()` is straight-forward, except for the fact that you call it once, and it returns twice! `exec()` is quite the opposite: if all goes well, `exec()` never returns! 
-It is also a little more difficult to use: in addition to the (absolute) path of the program you want to run, you need to provide a list of arguments in the form of an array of char *: the first one is the program name, and the last one must be 0. Once you get past that, it's not too bad. Try building and running the `fork_example` program: `make fork_example`, `./fork_example`. 
+`fork()` is straight-forward, except for the fact that you call it once, and it returns twice! Try building and running the `fork_example` program: `make fork_example`, `./fork_example` to get a feel for it.  
+
+`exec()` is quite the opposite: if all goes well, `exec()` never returns! It is also a little more difficult to use: in addition to the (absolute) path of the program you want to run, you need to provide a list of arguments in the form of an array of char *: the first one is the program name, and the last one must be 0. Once you get past that, it's not too bad. See `man exec` for the documentation. There are several flavors of this function - Consider useing `execv` for this assignment, but this choice is not very important. 
 
 In this step, write a program `step2` that uses `fork()` and `exec()` to run `limerick`, so that one piece of poetry shows up on the terminal. 
 
