@@ -69,7 +69,8 @@ Write the equivalent of steps 2-4 in Rust, using std::process::Command.
 https://doc.rust-lang.org/std/process/struct.Command.html
 
 Start by creating a new program with `cargo new step2`. Then edit step2/src/main.rs to add the 
-necessary code for step2. 
+necessary code for step2. Use `Command::output()` for step 2. Should be about 4 lines. 
+For step 4, you'll want to use `Command::spawn()` instead.
 
 Give it a shot. Although the language barrier will present a challenge to those new to Rust, the programs themselves are considerably easier to write in Rust. Do refer to the Learn Rust resources https://rust-lang.org/learn/, and feel free to reach out to your instructor or TAs for help with rust. (In 2026, Jakob and Jacob are your go-to rust helpers).
 
