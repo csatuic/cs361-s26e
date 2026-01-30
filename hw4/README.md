@@ -1,10 +1,10 @@
 ## Homework 4: Network Programming with Sockets and Epoll 
 
-Networking is critical to most modern software. In this assignment, we use the standard UNIX Socket API:{\tt socket()}, {\tt bind()}, {\tt listen()}, {\tt accept()} and {\tt connect()}, as well as the Linux-specific {\tt epoll()} system call to create a limerick exchange server, where clients may connect to {\tt PRESENT} and {\tt ENJOY} limericks together. 
+Networking is critical to most modern software. In this assignment, we use the standard UNIX Socket API: `socket()`, `bind()`, `listen()`, `accept()` and `connect()`, as well as the Linux-specific `epoll()` system call to create a limerick exchange server, where clients may connect to `PRESENT` and `ENJOY` limericks together. 
 
 ### Lab step 1. Download and build the template
 
-If you haven't already, clone the class repository and change to the {\tt hw4} folder within it. 
+If you haven't already, clone the class repository and change to the `hw4` folder within it. 
 There are two shell programs, `test_client.sh` and `test_server.sh`. Try running `./test_server.sh NNNN` where `NNNN` is a number you chose, greater than 1024.
 Then, in a separate terminal, run `./test_client.sh NNNN` with the same number. You should see a message sent from the client to the server.
 
