@@ -1,6 +1,6 @@
 ## Homework 4: Network Programming with Sockets and Epoll 
 
-Networking is critical to most modern software. In this assignment, we use the standard UNIX Socket API:`socket()`, `bind()`, `listen()`, `accept()` and `connect()`, as well as the Linux-specific `epoll()` system call to create a limerick exchange server, where clients may connect to `PRESENT` and `ENJOY` limericks together. 
+Networking is critical to most modern software. In this assignment, we use the standard UNIX Socket API: `socket()`, `bind()`, `listen()`, `accept()` and `connect()`, as well as the Linux-specific `epoll()` system call to create a limerick exchange server, where clients may connect to `PRESENT` and `ENJOY` limericks together. 
 
 ### Lab step 1. Download and build the template
 
@@ -95,4 +95,5 @@ To test, connect to the server with one or more `nc` clients, and issue the `AWA
 
 While `epoll` is available directly, through both the `libc` crate and several other convenience crates, the *right* way to handle multiple clients with a single-threaded server is to use asynchronous Rust code.
 
-For this, use the 'tokio' crate, and `use` the tokio.net instead of std.net for networking operations. 
+For this, you'll need to do a bit of reading on your own. At a high level, use the 'tokio' crate, and `use` the tokio.net instead of std.net for networking operations. For each accepted connection, use `tokio::task::spawn` to asynchronously handle the connection. On every call to a function labeled `async` in the tokio documentation, such as reading from a TcpStream, add .await to the end.
+This indicates to the compiler that it should check on not only this read, but on all other pending reads (and other async calls) at the same time. On the back end, this is implemented with `epoll`. 
