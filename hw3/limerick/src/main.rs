@@ -1,7 +1,7 @@
 use hypher::{hyphenate, Lang};
 use rand::seq::SliceRandom;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Write};
+use std::io::{self, BufRead, BufReader, Write, Read, Lines};
 use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::Duration;
@@ -24,6 +24,8 @@ struct Opt {
     #[structopt(short = "o", long = "outfile", parse(from_os_str))]
     outfile: Option<PathBuf>,
 
+    #[structopt(short = "s", long = "server")]
+    server: Option<String>,
 }
 
 fn load_limericks(path: PathBuf) -> io::Result<Vec<String>> {
@@ -79,7 +81,36 @@ fn present_limerick(write_to: &mut dyn Write, stop: &Arc<Mutex<bool>>, limerick:
         write_to.flush().unwrap();
         sleep(Duration::from_millis(800));
     }
-    let _ = write!(write_to, "\n");
+}
+
+fn await_limerick(from: &mut dyn BufRead) -> io::Result<String> {
+    let mut lines = from.lines();
+
+    let one=&lines.next().unwrap()?;
+    let two=&lines.next().unwrap()?;
+    let three=&lines.next().unwrap()?;
+    let four=&lines.next().unwrap()?;
+    let five=&lines.next().unwrap()?;
+
+    println!("Poem received. Checking for Limerick");
+
+    // Turns out this was far too complex for a systems course. 
+    // Maybe ask the machine learning folks!
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    println!("Uh... I dunno. Maybe?");
+
+    Ok(format!("{one}\n{two}\n{three}\n{four}\n{five}"))
+}
+
+fn expect_exact(from: &mut dyn Read, exact_string: &str) -> Result<(),String> {
+    let mut buf = vec![0u8;exact_string.as_bytes().len()];
+    from.read_exact(&mut buf);
+    if buf == exact_string.as_bytes() {
+        Ok(())
+    }
+    else { 
+        Err(format!("Did not get '{}'",exact_string))
+    }
 }
 
 fn main() -> io::Result<()> {
@@ -102,27 +133,50 @@ fn main() -> io::Result<()> {
         println!("Eh-hrm...");
         *alsostop.lock().unwrap()=true;
     }).expect("Error setting Ctrl-C handler");
+    let mut rng = rand::thread_rng();
 
-    let mut outfile;
-    let writer : &mut dyn Write = 
     if let Some(name) = &opt.outfile {
+        let mut outfile;
         sleep(Duration::from_millis(1000));
         outfile = File::create(name).unwrap();
-        &mut outfile
-    }
-    else {
-        &mut io::stdout()
-    };
 
-    let mut rng = rand::thread_rng();
-    if !opt.live {
         let chosen = limericks.choose(&mut rng).unwrap();
-        let _ = write!(writer, "{}\n", chosen);
+        let _ = write!(outfile, "{}\n", chosen);
         return Ok(());
     }
+    else if let Some(server) = &opt.server {
+        let mut socket = std::net::TcpStream::connect(server).unwrap();
+        let mut bufreader = BufReader::new(socket.try_clone()?);
 
-    loop {
-        let chosen = limericks.choose(&mut rng).unwrap();
-        present_limerick(writer, &stop, chosen);
+        if !opt.live {
+            let chosen = limericks.choose(&mut rng).unwrap();
+            let _ = write!(socket, "PRESENT\n");
+            expect_exact(&mut bufreader,"GO AHEAD\n").unwrap();
+            let _ = write!(socket, "{}", chosen);            
+            let _ = write!(socket, "AWAIT\n");
+            await_limerick(&mut bufreader);
+        }
+        else {
+            loop {
+                let chosen = limericks.choose(&mut rng).unwrap();
+                let _ = write!(socket, "PRESENT\n");
+                expect_exact(&mut bufreader,"GO AHEAD\n").unwrap();
+                let _ = present_limerick(&mut socket, &stop, chosen);            
+                let _ = write!(socket,"AWAIT\n");
+                await_limerick(&mut bufreader);            
+            }
+        }
     }
+    else {
+        if !opt.live {
+            let chosen = limericks.choose(&mut rng).unwrap();
+            let _ = write!(&mut io::stdout(), "{}\n", chosen);
+            return Ok(());
+        }
+        loop {
+            let chosen = limericks.choose(&mut rng).unwrap();
+            present_limerick(&mut io::stdout(), &stop, chosen);
+        }
+    };
+    return Ok(())
 }
