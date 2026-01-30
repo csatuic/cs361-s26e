@@ -42,8 +42,7 @@ Create a new server program, which is able to serve the `limerick` program over 
 If the `limerick` program says `PRESENT`, the server must respond with `GO AHEAD`. The client will then present a Limerick over the socket. If the client says `AWAIT`, the server must respond with a previously received Limerick in turn. You may want to use `getline()` to receive individual commands and lines of poetry, 
 and `strncmp()` to compare strings. 
 
-All limericks consist of 5 lines, with an A-A-B-B-A structure, where A is 8-10 syllables, and B is 5-6 syllables. The `limerick` program will expect that any Limericks it receives conform to this specification.
-Simply reproducing the most recently received Limerick correctly is enough to keep it from complaining.
+All limericks consist of 5 lines. Simply reproducing the most recently received Limerick correctly is enough to keep it from complaining.
 
 *Demonstrate:* Your limerick server successfully engaging with first one `limerick` program, then another.
 
@@ -52,9 +51,11 @@ Simply reproducing the most recently received Limerick correctly is enough to ke
 By default, the `limerick` program writes an entire limerick to the socket in one step. However, when passed the `-l` flag, it will present its Limericks more poetically. 
 
 In preparation for the remaining steps, write your server such that it accumulates a Limerick over time, rather
-than expect the entire poem to arrive in one `read`. 
+than expect the entire poem to arrive in one `read`. In preparation for step 7, make sure you're not using `fscanf` or `getline` or any other `libc` functions that read until a newline is encountered. 
 
-*Demonstrate:* Your server working with a `./limerick -l` client. 
+The `strchr()` function might be helpful in looking for a newline character in the accumulated buffer.
+
+*Demonstrate:* Your server working with a `./limerick -l` client. Show your TA that your implementation calls `read()` directly, rather than use `libc` helper functions. 
 
 ### Remaining step 6: Concurrent clients with `epoll`
 
@@ -68,11 +69,13 @@ Watch out for exited clients - you will want to use `epoll_ctl` to deregister th
 In this step, supporting limerick clients without `-l` is sufficient.
 
 To test your solution, start the server, then start multiple limerick clients that all connect to the server
-and talk to it at the same time. 
+and talk to it at the same time. To further test things, you can also connect to your server manually with `nc localhost NNNN` where `NNNN` is the port number. 
 
 ### Remaining step 7: Concurrent live clients
 
-Finally, make sure that you can also handle live limerick clients. You will find that with multiple concurrent limerick clients using `-l`, their messages *interleave*. To keep things straight, use a separate buffer for each client. 
+Finally, make sure that you can also handle live limerick clients. You will find that with multiple concurrent limerick clients using `-l`, their messages *interleave*. To keep things straight, you need to use a separate accumulation buffer for each client. 
+
+There are two ways you can associate a buffer with a client. You could use the file descriptor as an index into a an array of buffers, or you can pass a pointer to the buffer in the `data.ptr` field of the `struct epoll_event` that you give to `epoll_ctl`. The latter is cleaner, but the former makes for easier debugging, if you want to print out the contents of each buffer. You can also do both!
 
 To test your solution, start the server, then start multiple limerick clients with the `-l` flag, that all connect to the server and talk to it at the same time. 
 
@@ -86,5 +89,10 @@ every syllable from the presenter to the awaiter as they arrive.
 For this, you will need a data structure to match up awaiters with presenters: keep in mind that there
 may be multiple awaiters available when a presenter appears. Let them all enjoy the show together.
 
+To test, connect to the server with one or more `nc` clients, and issue the `AWAIT` command. Then, connect a `limerick -l` program to the server, and enjoy the presentation in all your awaiting client windows.
 
+### Advanced step 9: Rust async implementation
 
+While `epoll` is available directly, through both the `libc` crate and several other convenience crates, the *right* way to handle multiple clients with a single-threaded server is to use asynchronous Rust code.
+
+For this, use the 'tokio' crate, and `use` the tokio.net instead of std.net for networking operations. 
