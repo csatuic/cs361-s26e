@@ -153,7 +153,7 @@ fn main() -> io::Result<()> {
             let _ = write!(socket, "PRESENT\n");
             expect_exact(&mut bufreader,"GO AHEAD\n").unwrap();
             let _ = write!(socket, "{}", chosen);            
-            let _ = write!(socket, "AWAIT\n");
+            let _ = write!(socket, "\nAWAIT\n");
             await_limerick(&mut bufreader);
         }
         else {
