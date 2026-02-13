@@ -29,7 +29,7 @@ Use `help <command>` to get the documentation for a `gdb` command.
 
 Try using `make tonum` inside of `gdb`. It works, and saves an extra step as you modify your code. 
 
-Demonstrate: `tonum` printing the correct values of the string converted to numbers. Also, demonstrate using the `print` command to print the bytes array as a 8 hexadecimal numbers, and the `x` command to print the bytes array as a single 8-bytes hexadecimal value (should look like the string, but backwards).
+*Demonstrate:* `tonum` printing the correct values of the string converted to numbers. Also, demonstrate using the `print` command to print the bytes array as a 8 hexadecimal numbers, and the `x` command to print the bytes array as a single 8-bytes hexadecimal value (should look like the string, but backwards).
 
 ### Lab Step 2: structs and numbers
 
@@ -46,7 +46,7 @@ Now, let's use a different approach. Declare a new variable `struct foo baz;`  T
 
 Use `gdb` to print the value of `baz` after the memcpy: put a breakpoint at the line just after the `memcpy`, then use `print baz` and `print l` to see what's in them. Use `x/8bx &baz` to view the individual bytes in baz. 
 
-Demonstrate: Now use what you've learned to reverse this process. 
+*Demonstrate:* Now use what you've learned to reverse this process. 
 Show a TA a new `struct leet`, which when printed as an 8-byte unsigned integer in decimal notation yields: `461461461461461461`. Explain how you arrived the values in your new `struct leet`. 
 
 ### Lab Step 3: union busting
@@ -68,7 +68,7 @@ Specifically, which element of the `membership` array contains those two bytes m
 
 Finally, how many `pickets`, `strikes`, `bat_beatings`, `kneecaps`, and `concrete_shoes` are required in order to reach 3324321662465 `contracts`?
 
-Demonstrate: show your TA the number of each enforcement activity required to achieve 3324321662465 `proud.contracts` in this union. Use `print` in gdb to show it, and explain the method you used to find the solution. 
+*Demonstrate:* show your TA the number of each enforcement activity required to achieve 3324321662465 `proud.contracts` in this union. Use `print` in gdb to show it, and explain the method you used to find the solution. 
 
 ### Remaining Step 4: baby steps with malloc
 
