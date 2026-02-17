@@ -152,7 +152,7 @@ fn main() -> io::Result<()> {
             let chosen = limericks.choose(&mut rng).unwrap();
             let _ = write!(socket, "PRESENT\n");
             expect_exact(&mut bufreader,"GO AHEAD\n").unwrap();
-            let _ = write!(socket, "{}", chosen);            
+            let _ = write!(socket, "{}\n", chosen);            
             let _ = write!(socket, "AWAIT\n");
             await_limerick(&mut bufreader);
         }
