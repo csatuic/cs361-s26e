@@ -92,4 +92,13 @@ Then, each process prints the total and its winnings.
 
 - What do you observe about the sum of winnings vs. the reported total?
 - How does this vary with the number of participants?
+- Use the `time` utility to time the final participant. How does the runtime vary with the number of participants? 
 
+If you did things right, you'll notice something about the numbers doesn't match up. 
+Can you think of a reason why?
+
+Finally, instead of incrementing the total the normal way (say, total++, or total+=1), use inline assembly to use the atomic increment instruction `lock incq`. It takes the address of an 8-byte integer as argument, and 
+atomically (in one step) reads, increments and writes back the new value. You'll want a "+m" constraint, to indicate a memory address as input+output operand. 
+
+- What do you notice about the runtime of the updated program? 
+- How does the runtime of this program vary with the number of participants?

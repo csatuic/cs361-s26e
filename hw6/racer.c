@@ -24,8 +24,8 @@ int main(int argc, char** argv) {
     struct stat stats;
     if(stat("racecourse.bin",&stats)==-1) {
         leader=true;
-        fd = open("racecourse.bin",O_CREAT|O_RDWR);
-        ftruncate(fd,sizeof(struct RaceCourse));
+        fd = open("racecourse.bin",O_CREAT|O_RDWR,0755);
+        int ret = ftruncate(fd,sizeof(struct RaceCourse));
     }
     else {
         fd = open("racecourse.bin",O_RDWR);
@@ -39,11 +39,13 @@ int main(int argc, char** argv) {
     if(leader) {
         c->participants=atoi(argv[1]);
     }
+    int my_participant_id = c->participants;
     c->participants -= 1;
 
     while(c->participants>0);    
     printf("Everybody is here, let's go!\n");
 
+   
     /* add your code here */
 
     // clean up the racecourse for the next race
