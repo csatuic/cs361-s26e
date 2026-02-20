@@ -82,16 +82,13 @@ Finally, consider the struct below:
     long winnings[10];
 }`
 
-The plan here is to run a little friendly competition between multiple processes. Write a program that takes an integer argument on the command line, indicating the intended number of participants. You will start multiple instances of this program, in separate ssh windows. 
+The plan here is to run a little friendly competition between multiple processes. `racer.c` is similar to lab step 3, but which takes an integer argument on the command line, indicating the intended number of participants. You will need to start multiple instances of this program in separate ssh windows, with the same command line argument. 
 
-When the first instance starts (finding no file), it creates a file big enough to hold a `struct RaceCourse` using `open()` with the `O_CREATE` flag and `ftruncate`, then `mmaps()` it
-into memory, and casts the pointer as a `struct RaceCourse*`. Finally, it sets the `participants` field to the number from the command line argument,
-then waits (using a while loop), until all the participants have arrived.
+Read the `racer.c` code carefully to make sure you understand what it's doing, then try building and running it, to see it in action. 
 
-The other processes mmap the existing file, and increment the number of participants by one. 
-Finally, when all the participants have arrived, all of the processes immediately proceed to repeatedly increment first the `total` by one, then the `winnings` by one, until the total reaches 1 billion. 
+Now, add code as follows: when all the participants have arrived, all of the processes immediately proceed to repeatedly increment first the `total` by one, then the `winnings` by one, until the total reaches 1 billion. 
 
-Then, each process prints the total and its winnings. Finally, the first instance deletes the file. 
+Then, each process prints the total and its winnings. 
 
 - What do you observe about the sum of winnings vs. the reported total?
 - How does this vary with the number of participants?
