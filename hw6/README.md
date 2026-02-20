@@ -69,8 +69,8 @@ The programs `foo.c` and `bar.c` both use the `foobar.so` shared library. `foo` 
 Observe the addresses of the access functions `setbaz()` and `getbaz()`, as well as the address of `baz` itself. Now, using `strace -e openat,mmap`, work out the following:
 
 - what `mmap` calls during the start-up of `foo` and `bar` correspond to loading the shared library?
-- is there more than one per program? How do the allocated regions map to the addresses of the functions and the `baz` global variable?
-- are there any differences in the flags used? What motivates the difference in flags used?
+- is there more than one per program? Which of the allocated regions corresponds to the addresses of the functions and the `baz` global variable?
+- are there any differences in the flags used? What motivates the difference in flags used? Use `man mmap` to read about the flags and their meanings.
 
 ### Remaining Step 5: inter-process communication (IPC) using shared memory
 
@@ -84,7 +84,7 @@ Finally, consider the struct below:
 
 The plan here is to run a little friendly competition between multiple processes. Write a program that takes an integer argument on the command line, indicating the intended number of participants. You will start multiple instances of this program, in separate ssh windows. 
 
-When the first instance starts (finding no file), it creates a file big enough to hold a `struct RaceCourse` using `open()` with the `O_CREATE` flag and `lseek`, then `mmaps()` it
+When the first instance starts (finding no file), it creates a file big enough to hold a `struct RaceCourse` using `open()` with the `O_CREATE` flag and `ftruncate`, then `mmaps()` it
 into memory, and casts the pointer as a `struct RaceCourse*`. Finally, it sets the `participants` field to the number from the command line argument,
 then waits (using a while loop), until all the participants have arrived.
 

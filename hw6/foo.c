@@ -6,6 +6,6 @@ int main() {
     setbaz(17);
     while(1) {
         sleep(1);
-        printf("baz at %p is %d\n",&baz,getbaz());
+        printf("baz at %p is %d\n",bazaddr(),getbaz());
     }
 }
