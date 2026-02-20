@@ -105,7 +105,7 @@ Now, use the `next` to pass `free(chunk[2])`, so that both `chunks[1]` and `chun
 
 #### Fully free the second chunk
 
-Now, use the `next` again, to pass the `free(malloc(1000000))`. This forces `malloc` to "consolidate the heap": finish any postponed work. In particular, finishing up freeing chunks temporarily stored in the *"unsorted list"*. 
+Now, use the `next` again, to pass the `free(malloc(1000000))`. This forces `malloc` to "consolidate the heap": finish any postponed work. In particular, finishing up freeing chunks temporarily stored in the *"unsorted list"* or *"fast bins"*. You can read more about these here: https://sourceware.org/glibc/wiki/MallocInternals
 
 - Did anything further change in chunk[1] after this step? Why?
 - Did anything change in chunk[2]? What, and why?

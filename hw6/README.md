@@ -20,7 +20,7 @@ In this step, we use experimentation to figure out what size `malloc` uses as th
 
 Write a program from scratch, that allocates an increasingly large amount of memory. 
 For each allocation, print the address and the boundary tag of the returned chunk. The boundary tag is the 8 bytes before the byte that the returned pointer points at. Use the '%p' printf format specifier to print the chunk address, and the '%x' specifier for the boundary tag. You will notice that the boundary tag contains 
-more than just the size: it also includes one low-order bit to indicate if the chunk is free or in-use, and one bit to indicate if it was allocated from the heap, or with `mmap`. 
+more than just the size: it also includes one low-order bit to indicate if the previous chunk is free or in-use, and one bit to indicate if it was allocated from the heap, or with `mmap`. 
 
 - Work out which bit (and value of the bit) corresponds to free/in_use. By allocating two chunks, then printing the boundary tag of the first chunk, freeing it, and printing the tag again, you should be able to work it out. 
 - Work out which bit corresponds to heap/mmap. By allocating increasingly large chunks, and looking for a change in a low order bit as you pass a certain size, you should be able to work that out.
@@ -35,6 +35,7 @@ Show your `strace` results, and explain your reasoning.
 Malloc supports anonymous and file-backed operation. Above, `malloc` used `mmap` with the `MAP_ANONYMOUS` flag, to simply request a region of allocated memory. 
 With file-backed `mmap`, the returned pointer points a region of memory containing the contents of the specified file.
 Moreover, this is a bi-directional mapping: if you write something to the memory, it ends up in the file, without you having explicitly write anything out to disk. But that's for step 3. 
+
 
 
 ### Lab Step 3: write to a persistent datastructure with mmap
