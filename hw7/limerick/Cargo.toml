@@ -1,0 +1,11 @@
+[package]
+name = "limerick"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+hypher = { version = "0.1", default-features = false, features = ["english"] }
+structopt = "0.3"
+rand = "0.8"
+termion = "1.5"
+ctrlc = "*"
