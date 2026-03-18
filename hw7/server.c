@@ -46,14 +46,12 @@ int main(int argc, char** argv) {
         char *line = NULL;
         size_t len = 0;
         int nread = 0;
-        printf("waiting on getline\t");
         while ((nread=getline(&line, &len, client)) != -1) {
             // Remove trailing newline for command matching
             if (nread > 0 && (line[nread - 2] == '\r')) line[nread - 2] = '\0';
             if (nread > 0 && (line[nread - 1] == '\n')) line[nread - 1] = '\0';
 
             if (strcmp(line, "PRESENT") == 0) {
-            printf("got '%s' %d\n",line,nread);
                 fprintf(client, "GO AHEAD\n");
                 fflush(client);
                 // Read exactly 5 lines for the limerick
