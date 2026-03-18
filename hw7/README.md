@@ -52,13 +52,18 @@ For the word itself, the count mentioned above, and the sequence number, make su
 
 To achieve the required funcionality of step 3, you have been using a `pthread_mutex_t` lock. However, this forces the server to continuously poll the global variable to see if there is something new to deliver. 
 
-In this step, use a `pthread_condvar_t` to have the server more efficiently wait for the clients. As discussed in class, conditon variables must be used *only* to achieve efficiency improvements: the program should continue working correctly even if the condition wait is commented out. Thus, leave your original functionality in place, but introduce condition variable operations to achieve a more efficient wait. 
+In this step, use a `pthread_condvar_t` to have the server more efficiently wait for the clients. As discussed in class, conditon variables must be used *only* to achieve efficiency improvements: the program should continue working correctly even if the `cond_wait` is replaced by a `pthread_mutex_unlock` and a `pthread_mutex_lock`. Thus, leave your original functionality in place, but introduce condition variable operations to achieve a more efficient wait. 
 
 Wait for a presenter to arrive using a `pthread_cond_wait` in a loop, checking each time whether another word has arrived. Use a variable to indicate that a word has arrived AND then a `pthread_cond_signal` to wake any potential waiters. Both are necessary for correct operation, in that order. 
+
+To test your solution, run the same test as lab step 3, but run the server with the `time` utility: `time nc localhost <port>`. The step 3 server will report high `user` and `system` time numbers, similar to or larger than the `real` time. With a working step 4, the `user` and `system` times should instead be a tiny fraction of a second.
 
 ### Remaining step 5: Exclusive delivery
 
 In this final step, introduce a new `awaitprivate` command. When a client issues a `awaitprivate` command, it waits for the next incoming limerick presentation. 
 However, when a presentation occurs, no matter how many private awaiters or regular awaiters there are, only one private awaiter receives the presentation: the others keep waiting. 
 
-Here, use the lock associated with the condition variable to atomically check and modify your condition. The lock is automatically released when you enter `pthread_cond_wait`, and automatically re-acquired before you return.
+Here, use the lock associated with the condition variable to atomically check and modify your condition. The lock is automatically released when you enter `pthread_cond_wait`, and automatically re-acquired before you return. When an `awaitprivate` client wakes up from waiting, check if a presentation is available. If so, 
+figure out a way to "claim" the presentation, so that other awaiters can't attend it. 
+
+To test your solution, start two private awaiters using an `nc` client. Then, start a live presenter using the `limerick` client. Only one private awaiter should see the presentation. Launch another live presenter using the `limerick` client - at this point, the second waiter should see the second presentation. 
