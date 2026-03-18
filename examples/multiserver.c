@@ -14,13 +14,12 @@ int main(int argc, char** argv) {
   serv_addr.sin_port = htons(8765);
 
   int fd = socket(AF_INET, SOCK_STREAM, 0);
+  int flag=1;
+  setsockopt(fd,SOL_SOCKET,SO_REUSEPORT,&flag,4);
+
   if(fd==-1) {
 	perror("problem making socket\n");
 	exit(1);
-  }
-  if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0) {
-    perror("error setting SO_REUSEADDR");
-    exit(1);
   }
   int res = bind(fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
   if(res) {
@@ -29,9 +28,17 @@ int main(int argc, char** argv) {
   }
 
   listen(fd,10);
-  int client = accept(fd,0,0);
-  
-  char buf[100];
-  int got = read(client,buf,100);
-  write(1,buf,got);
+
+  while(1) {
+    printf("Waiting for client...");
+//    fflush(stdout);
+    int client = accept(fd,0,0);
+    printf("got one!\n");
+    
+    char buf[100];
+    int got;
+    while((got=read(client,buf,100))>0) {
+        write(1,buf,got);    
+    }
+  }
 }
