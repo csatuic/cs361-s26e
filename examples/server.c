@@ -18,6 +18,10 @@ int main(int argc, char** argv) {
 	perror("problem making socket\n");
 	exit(1);
   }
+  if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0) {
+    perror("error setting SO_REUSEADDR");
+    exit(1);
+  }
   int res = bind(fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
   if(res) {
 	perror("problem binding\n");
