@@ -66,4 +66,6 @@ However, when a presentation occurs, no matter how many private awaiters or regu
 Here, use the lock associated with the condition variable to atomically check and modify your condition. The lock is automatically released when you enter `pthread_cond_wait`, and automatically re-acquired before you return. When an `awaitprivate` client wakes up from waiting, check if a presentation is available. If so, 
 figure out a way to "claim" the presentation, so that other awaiters can't attend it. 
 
-To test your solution, start two private awaiters using an `nc` client. Then, start a live presenter using the `limerick` client. Only one private awaiter should see the presentation. Launch another live presenter using the `limerick` client - at this point, the second waiter should see the second presentation. 
+To test your solution, start two private awaiters using an `nc` client. Then, start a live presenter using the `limerick` client. Only one private awaiter should see the presentation. Once the presenter starts its second presentation, the second private awaiters should see the presenter's second limerick. 
+If you launch another live presenter using the `limerick` client while the first presenter is presenting its first limerick, the second awaiter should immediately start 
+seeing the second presenter's show. 

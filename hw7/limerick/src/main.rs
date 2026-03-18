@@ -16,6 +16,9 @@ struct Opt {
     #[structopt(short = "l", long = "live")]
     live: bool,
 
+    #[structopt(short = "p", long = "present")]
+    present_only: bool,
+
     /// Input file containing limericks (default: limericks.txt)
     #[structopt(short = "f", long = "file", parse(from_os_str))]
     file: Option<PathBuf>,
@@ -153,8 +156,11 @@ fn main() -> io::Result<()> {
             let _ = write!(socket, "PRESENT\n");
             expect_exact(&mut bufreader,"GO AHEAD\n").unwrap();
             let _ = write!(socket, "{}\n", chosen);            
-            let _ = write!(socket, "AWAIT\n");
-            await_limerick(&mut bufreader);
+
+            if !opt.present_only {
+                let _ = write!(socket, "AWAIT\n");
+                await_limerick(&mut bufreader);
+            }
         }
         else {
             loop {
@@ -162,8 +168,10 @@ fn main() -> io::Result<()> {
                 let _ = write!(socket, "PRESENT\n");
                 expect_exact(&mut bufreader,"GO AHEAD\n").unwrap();
                 let _ = present_limerick(&mut socket, &stop, chosen);            
-                let _ = write!(socket,"AWAIT\n");
-                await_limerick(&mut bufreader);            
+                if !opt.present_only {
+                    let _ = write!(socket,"AWAIT\n");
+                    await_limerick(&mut bufreader);            
+                }
             }
         }
     }
