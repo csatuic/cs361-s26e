@@ -7,7 +7,7 @@
 #include <getopt.h>
 
 #define NUM_BINS 5
-#define MAX_QUEUE 1000
+#define MAX_QUEUE 10000
 #define USLEEP_USEC 1000  // 10 ms delay for UAF reproducibility (buggy version only)
 
 typedef struct {
@@ -27,6 +27,7 @@ pthread_cond_t queue_cond = PTHREAD_COND_INITIALIZER;
 
 int stop_flag = 0;                    // BUG 1: global stop flag - neither volatile nor protected by lock
 int global_sequence = 0;              // BUG 2: classic race on shared integer count (unprotected increments)
+int wakeup_seq = -1;
 bool inventory[NUM_BINS] = {false};   // each bin holds 0 or 1 item
 pthread_mutex_t bin_locks[NUM_BINS];
 pthread_mutex_t inventory_lock = PTHREAD_MUTEX_INITIALIZER;  // only for final/controller checks
@@ -99,12 +100,13 @@ int main(int argc, char **argv) {
         while (tasks_remaining > 0) {
             pthread_cond_wait(&completion_cond, &queue_lock);
         }
+        printf("remaining: %d\n",tasks_remaining);
         pthread_mutex_unlock(&queue_lock);
     }
 
     // BUG 1 continued: set stop flag (no lock, not volatile)
     stop_flag = 1;
-    pthread_cond_signal(&queue_cond);
+    pthread_cond_broadcast(&queue_cond);
 
     // BUG 6: use-after-free - immediately free remaining queue while workers may still hold pointers
     // for (int i = queue_front; i < queue_size; i++) {
@@ -125,26 +127,6 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-void enqueue_orders(int num_tasks, int task_group) {
-    pthread_mutex_lock(&queue_lock);
-    int to_enqueue = (num_tasks > 0 ? num_tasks : MAX_QUEUE);
-    for (int i = 0; i < to_enqueue; i++) {
-        Order *o = malloc(sizeof(Order));
-        o->id = i;
-        o->type = i%task_group+1;
-        if (o->type == 1) expected_total++;
-        if (o->type == 2) o->target_seq = i + 10;  // milestone target
-        if (o->type == 3) {
-            o->src_bin = i % NUM_BINS;
-            o->dst_bin = (i * 3) % NUM_BINS;
-        }
-        queue[queue_size++] = o;
-    }
-    tasks_remaining = queue_size;
-    pthread_cond_broadcast(&queue_cond);
-    pthread_mutex_unlock(&queue_lock);
-}
-
 void *worker(void *arg) {
     (void)arg;    
     int r = 1;
@@ -160,24 +142,23 @@ void *worker(void *arg) {
             // BUG 1: loop condition uses unprotected, non-volatile flag -> optimizer caches it
             if (stop_flag) break;
 
-            usleep(USLEEP_USEC);  // reproducibility aid for use-after-free (buggy version only)
-
             // Process according to type
             if (o->type == 1) {
                 // BUG 2: classic race on shared count
                 global_sequence++;
+                if(global_sequence == wakeup_seq)
+                    pthread_cond_broadcast(&alert_cond);
             } else if (o->type == 2) {
+                printf("Waiting for %d\n",o->target_seq);
                 pthread_mutex_lock(&alert_lock);
-                // BUG 4: predicate check WITHOUT holding lock
-                if (global_sequence < o->target_seq) {
-                    pthread_cond_wait(&alert_cond, &alert_lock);  // BUG 3 continued: no predicate re-check after wait
-                }
+                wakeup_seq = o->target_seq;
+                pthread_cond_wait(&alert_cond, &alert_lock);  
                 printf("ALERT: milestone %d reached (actual observed = %d)\n", o->target_seq, global_sequence);
                 pthread_mutex_unlock(&alert_lock);
             } else if (o->type == 3) {
                 // BUG 5: deadlock (parameter-dependent lock ordering via bin indices)
                 int first = o->src_bin;
-                int second = o->dst_bin;
+                int second = o->dst_bin;                
                 pthread_mutex_lock(&bin_locks[first]);
                 pthread_mutex_lock(&bin_locks[second]);  // can deadlock if crossed with another thread
 
@@ -196,14 +177,6 @@ void *worker(void *arg) {
                 // BUG 6 continued: use-after-free possible here (o is already freed by controller in timed mode)
                 // (accessing o->id below would read freelist pointers)
                 if (o->id % 100 == 0) printf("Processed transfer order %d\n", o->id);
-            }
-
-            // BUG 8: inconsistent data structure race - partial update, other work, then fix
-            // (simulated by touching global_sequence again after a "delay")
-            if (o->type == 1) {
-                global_sequence += 10;  // partial
-                usleep(5000);           // "other work"
-                global_sequence -= 10;  // fix - window for other threads to see inconsistent state
             }
 
             free(o);  // normal free (the UAF happens on queue entries freed by controller)
@@ -225,6 +198,11 @@ void *worker(void *arg) {
     return NULL;
 }
 
+// THERE ARE NO BUGS BELOW THIS LINE
+// It may look a little funny, but that's just because it's setting up a scenario that triggers
+// concurrency bugs elsewhere, not because there are bugs here. Don't change code below. 
+// THERE ARE NO BUGS BELOW THIS LINE
+
 void controller_checks(int round_num) {
     pthread_mutex_lock(&inventory_lock);
     int total_items = 0;
@@ -236,12 +214,51 @@ void controller_checks(int round_num) {
     if (global_sequence != expected_total) {  // expected deterministic value for demo
         fprintf(stderr, "ROUND %d INVARIANT VIOLATION: sequence = %d (expected %d)\n",
                 round_num, global_sequence, expected_total);
-        abort();
+        exit(1);
     }
     if (total_items != 1) {  // invariant: exactly one item total
         fprintf(stderr, "ROUND %d INVARIANT VIOLATION: inventory total = %d (expected 1)\n",
                 round_num, total_items);
-        abort();
+        exit(1);
     }
     printf("ROUND %d: sequence = %d, inventory total = %d\n", round_num, global_sequence, total_items);
+}
+
+void enqueue_orders(int num_tasks, int task_group) {
+    pthread_mutex_lock(&queue_lock);
+    int to_enqueue = (num_tasks > 0 ? num_tasks : MAX_QUEUE);
+    int i = 0;
+    for (; i < to_enqueue; i++) {
+        Order *o = malloc(sizeof(Order));
+        o->id = i;
+
+        // pure sequence number update
+        if(task_group == 1) {
+            o->type = 1;
+            expected_total++;
+        }
+        // milestone alerts and sequence numbers
+        else if(task_group == 2) {
+            if(i%5100==0) {
+                o->type = 2; // alert
+                o->target_seq = 5000+i/100;
+            }
+            else {
+                o->type = 1;
+                expected_total++;
+            }
+        }        
+        else if(task_group == 3){
+            o->type = 3;
+            o->src_bin = i % NUM_BINS;
+            o->dst_bin = (i * 3) % NUM_BINS;
+            if(o->src_bin==o->dst_bin) {
+                o->dst_bin = (o->dst_bin+1)%NUM_BINS;
+            }
+        }
+        queue[queue_size++] = o;
+    }
+    tasks_remaining = queue_size;
+    pthread_cond_broadcast(&queue_cond);
+    pthread_mutex_unlock(&queue_lock);
 }
