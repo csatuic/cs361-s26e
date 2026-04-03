@@ -12,7 +12,7 @@
 #define COLS 15
 #define QUEUE_SIZE 100
 #define DEFAULT_NUM_JOBS 100000
-#define DISPLAY_US 250000   // 250 ms refresh
+#define DISPLAY_US 500000   // 250 ms refresh
 
 enum JobType {
     JOB_ADD,
