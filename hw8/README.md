@@ -70,6 +70,6 @@ A correct solution runs to completion and produces accurate final counts with QU
 
 Even with all the fixes above, you'll find that the display shows "Alert: count mismatch" from time to time. 
 
-First, add `exit(1)` to the block where this print happens (after the print) to make the remaining mismatches easier to spot. Then, identify and fix the cause of this count mismatch. Here, `gdb` is not the right tool. Consider reviewing the thread sanitizer output, and carefully study the code that leads up to the alert. 
+First, add `exit(1)` to the block where this print happens (after the print) to make the remaining mismatches easier to spot. Then, identify and fix the cause of this count mismatch. Here, `gdb` is not the right tool. Consider reviewing the thread sanitizer output (running with flagsquare without `-q`), and carefully study the code that leads up to the alert. 
 
 A correct solution never produces the count mismatch alert, even during the run, and even with many threads. 
