@@ -5,7 +5,7 @@ The operations are ADD, REMOVE, and SWAP, where ADD enables a randomly selected 
 REMOVE disables a randomly selected flag, if it isn't already disabled, and SWAP swaps the state of two randomly selected flags,
 if they aren't both enabled or disabled. 
 
-The program consists of a main thread, which issues jobs into a shared queue, and a number of worker threads which fetch one job at a time from the queue and executes the job. 
+The program consists of a main thread, which issues jobs into a shared queue, and a number of worker threads which fetch one job at a time from the queue and executes the job. At 300 lines, this program may already be too long to simply read and catch the bugs by hand. Better to get some practice using commonly available tools! 
 
 ### Step 0: try it out with one worker
 
@@ -44,10 +44,14 @@ There will be several threads involved, so make sure you use the commands above 
 the relevant values and perhaps addresses to see what's going on. 
 An obscure hint: A closer look at index variables may be warranted. 
 
-### Remaining Step 4: Things breaking under heavy load - a more subtle bug
+### Remaining Step 4: The program tends to hang with a small queue - a more subtle race
 
-To simulate an overloaded system, reduce QUEUE_SIZE from 100 to 5. Now, the counts are once again inconsistent, even by just a little bit, and occasionally, the program hangs again. Use the `clang` thread sanitizer to track this down, and fix the bug. 
+To simulate an overloaded system, reduce QUEUE_SIZE from 100 to 5. Now, the counts are once again inconsistent, even by just a little bit, and occasionally, the program hangs again. Use the thread sanitizer to track this down, and fix the bug. 
 
 Hint: for thread safety, it's sometimes necessary to work on a temporary copy of shared data. 
 
-### Remaining Step 5: TBD
+### Remaining Step 5: The program tends to hang with many worker threads - a different synchronization problem
+
+With 2--4 workers, your program should now be working fine the vast majority of the time. But if you increase to `-w 16`, you'll find the program still hangs relatively often. Use `gdb` to figure out what threads are hanging and where, and figure out why they aren't continuing. 
+
+Hint: https://linux.die.net/man/3/pthread_cond_signal

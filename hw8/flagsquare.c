@@ -17,7 +17,8 @@
 enum JobType {
     JOB_ADD,
     JOB_REMOVE,
-    JOB_SWAP
+    JOB_SWAP,
+    JOB_EXIT,
 };
 
 struct Job {
@@ -76,16 +77,18 @@ void enqueue(struct Job job) {
     pthread_mutex_unlock(&queue.mutex);
 }
 
-struct Job* dequeue() {
-    struct Job *job;
+struct Job dequeue() {
+    struct Job job;
     pthread_mutex_lock(&queue.mutex);
     while (queue.count == 0 && !queue.done) {
         pthread_cond_wait(&queue.not_empty, &queue.mutex);
     }
     if (queue.count == 0 && queue.done) {
-        return 0;
+        job.type=JOB_EXIT;
+        pthread_mutex_unlock(&queue.mutex);
+        return job;
     }
-    job = &queue.jobs[queue.head];
+    job = queue.jobs[queue.head];
     queue.head = (queue.head + 1) % QUEUE_SIZE;
     queue.count--;
     pthread_cond_signal(&queue.not_full);
@@ -98,7 +101,7 @@ void init_flags() {
         flags[i] = (i % 2 == 0) ? 1 : 0;
         pthread_mutex_init(&flag_mutexes[i], NULL);
     }
-    flag_count = NUM_FLAGS / 2;  // 300
+    flag_count = NUM_FLAGS / 2;  
 }
 
 void destroy_mutexes() {
@@ -183,11 +186,11 @@ void* display_thread(void* arg) {
 
 void* worker_thread(void* arg) {
     while (1) {
-        struct Job *job = dequeue();
-        if (!job) {
+        struct Job job = dequeue();
+        if (job.type==JOB_EXIT) {
             break;
         }
-        perform_job(job);
+        perform_job(&job);
     }
     return NULL;
 }
@@ -272,7 +275,7 @@ int main(int argc, char* argv[]) {
     // Signal termination
     pthread_mutex_lock(&queue.mutex);
     queue.done = true;
-    pthread_cond_broadcast(&queue.not_empty);
+    pthread_cond_signal(&queue.not_empty);
     pthread_mutex_unlock(&queue.mutex);
 
     // Join workers
