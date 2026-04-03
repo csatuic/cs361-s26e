@@ -27,6 +27,8 @@ You might also notice that one of the worker thread always manages to finish, wh
 
 Find and fix the bug that causes this hang. 
 
+*Demonstrate:* the program running to completion with two workers. 
+
 ### Lab Step 2: two or more workers - something is wrong with the count
 
 Often, when using two or more workers we find that the two counts at the top of the display don't match up. 
@@ -34,8 +36,10 @@ Often, when using two or more workers we find that the two counts at the top of 
 Find and fix the bug(s) that causes this inconsistency. Because the problem is fairly localized, you could consider reading the code. 
 Or, use the threadsanitizer utility to get some ideas. Compile the binary with `gcc -fsanitize=thread -g flagsquare.c -o flagsquare`. 
 Using the default settings, the thread sanitizer output will be mixed up with the flag display, and include a lot of 
-hits from the display thread, which is in fact quite racy but harmless. You can disable the interactive display output with the `-q` flag. 
+hits from the display thread, which is in fact racy but harmless at this point. You can disable the interactive display output with the `-q` flag. 
  You'll get a fair number of hits, but one of them is probably right.
+
+ *Demonstrate:* the program producing an accurate final count with two workers.  
 
 ### Lab Step 3: two or more workers, with swaps - occasional hangs
 
@@ -44,14 +48,28 @@ There will be several threads involved, so make sure you use the commands above 
 the relevant values and perhaps addresses to see what's going on. 
 An obscure hint: A closer look at index variables may be warranted. 
 
+*Demonstrate:* the program running to completion with four workers, 10000000 jobs, and swaps enabled. 
+
 ### Remaining Step 4: The program tends to hang with a small queue - a more subtle race
 
 To simulate an overloaded system, reduce QUEUE_SIZE from 100 to 5. Now, the counts are once again inconsistent, even by just a little bit, and occasionally, the program hangs again. Use the thread sanitizer to track this down, and fix the bug. 
 
 Hint: for thread safety, it's sometimes necessary to work on a temporary copy of shared data. 
 
+A correct solution runs to completion and produces accurate counts with a QUEUE_SIZE of 5, swaps enabled and 4 threads. 
+
 ### Remaining Step 5: The program tends to hang with many worker threads - a different synchronization problem
 
 With 2--4 workers, your program should now be working fine the vast majority of the time. But if you increase to `-w 16`, you'll find the program still hangs relatively often. Use `gdb` to figure out what threads are hanging and where, and figure out why they aren't continuing. 
 
 Hint: https://linux.die.net/man/3/pthread_cond_signal
+
+A correct solution runs to completion and produces accurate final counts with QUEUE_SIZE 5 or 100, with 16 or even 32 threads. 
+
+### Remaining Step 6: Occasional count mismatches still occur
+
+Even with all the fixes above, you'll find that the display shows "Alert: count mismatch" from time to time. 
+
+First, add `exit(1)` to the block where this print happens (after the print) to make the remaining mismatches easier to spot. Then, identify and fix the cause of this count mismatch. Here, `gdb` is not the right tool. Consider reviewing the thread sanitizer output, and carefully study the code that leads up to the alert. 
+
+A correct solution never produces the count mismatch alert, even during the run, and even with many threads. 
