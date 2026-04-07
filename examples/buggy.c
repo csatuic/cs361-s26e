@@ -12,7 +12,7 @@ pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 void* thread_function(void* arg)
 {
     pthread_mutex_lock(&lock);
-    counter++
+    counter++;
     pthread_mutex_unlock(&lock);
 
     return NULL;
@@ -21,17 +21,7 @@ void* thread_function(void* arg)
 int main(void)
 {
     pthread_t thread1;
-
-
-    /* Initialize the barrier for exactly two threads (POSIX threads are used here
-     * because the C11 <threads.h> library does not provide a barrier primitive). */
-    if (pthread_barrier_init(&barrier, NULL, 2) != 0) {
-        fprintf(stderr, "Barrier initialization failed.\n");
-        return EXIT_FAILURE;
-    }
-
-
-
+    
     /* Create the two worker threads. */
     if (pthread_create(&thread1, NULL, thread_function, NULL) != 0) {
         fprintf(stderr, "Thread creation failed.\n");
