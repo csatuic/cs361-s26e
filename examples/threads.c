@@ -53,6 +53,7 @@ int main(int argc, char** argv) {
       int client = accept(fd,0,0);
       pthread_create(&thread,0,handle_client,(void*)client);
     }
+    
     // accept() 
 
     printf("hi from parent\n");
