@@ -42,12 +42,10 @@ static void run_tracer(void) {
     if (ptrace(PTRACE_INTERRUPT, child_pid, 0, 0) < 0)
         perror("PTRACE_INTERRUPT (initial)");
 
-    printf("initial interrupt done\n");
     if (waitpid(child_pid, &status, 0) < 0) {
         perror("waitpid initial");
         return;
     }
-    printf("waitpid passed\n");    
     // if (ptrace(PTRACE_SETOPTIONS, child_pid, 0,
     //            PTRACE_O_TRACEEXEC) < 0)
     //     perror("PTRACE_SETOPTIONS");
@@ -60,7 +58,6 @@ static void run_tracer(void) {
     struct sigaction sa = { .sa_handler = sigint_handler, .sa_flags = SA_RESTART };
     sigemptyset(&sa.sa_mask);
     sigaction(SIGINT, &sa, NULL);
-    printf("[DEBUG] SIGINT handler installed\n");
 
     printf("Spy attached (PID %d). Child is running freely.\n", child_pid);
     printf("Press Ctrl-C to inspect.\n\n");
@@ -74,16 +71,18 @@ static void run_tracer(void) {
         }
 
         if (interrupt_flag) {
-            printf("[DEBUG] Main loop saw interrupt_flag == 1\n");
             interrupt_flag = 0;
 
+            printf("interrupting\n");
             if (ptrace(PTRACE_INTERRUPT, child_pid, 0, 0) < 0)
                 perror("PTRACE_INTERRUPT");
+            printf("interrupted\n");
 
             if (waitpid(child_pid, &status, 0) < 0) {
                 perror("waitpid after INTERRUPT");
                 break;
             }
+            printf("wait finished\n");
 
             if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGINT)
                 printf("(SIGINT suppressed for child)\n");
