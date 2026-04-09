@@ -20,25 +20,25 @@ static pid_t child_pid = -1;
 static char *child_exec = NULL;
 static char **child_args = NULL;
 
-static volatile sig_atomic_t interrupt_flag = 0;
+static int tty_fd = -1;
+static pid_t original_fg_pgrp = -1;
+static pid_t child_pgid = -1;
+static pid_t tracer_pgid = -1;
 
-/* Async-safe message for signal handler */
-static void safe_print(const char *msg) {
-    write(STDOUT_FILENO, msg, strlen(msg));
+/* Restore the original foreground process group on program exit */
+static void cleanup_terminal(void) {
+    if (tty_fd >= 0 && original_fg_pgrp > 0) {
+        tcsetpgrp(tty_fd, original_fg_pgrp);
+        close(tty_fd);
+        tty_fd = -1;
+    }
 }
-
-static void sigint_handler(int sig) {
-    (void)sig;
-    interrupt_flag = 1;
-    safe_print("[SIGINT] Handler fired - setting flag\n");
-}
-
 
 static void run_tracer(void) {
     int status;
     struct user_regs_struct regs;
 
-    /* Force initial stop */
+    /* Force initial stop after SEIZE */
     if (ptrace(PTRACE_INTERRUPT, child_pid, 0, 0) < 0)
         perror("PTRACE_INTERRUPT (initial)");
 
@@ -46,70 +46,85 @@ static void run_tracer(void) {
         perror("waitpid initial");
         return;
     }
-    // if (ptrace(PTRACE_SETOPTIONS, child_pid, 0,
-    //            PTRACE_O_TRACEEXEC) < 0)
-    //     perror("PTRACE_SETOPTIONS");
+
+    /* Give the terminal to the child's process group before the first resume */
+    if (tty_fd >= 0) {
+        if (tcsetpgrp(tty_fd, child_pgid) < 0)
+            perror("tcsetpgrp to child (initial)");
+    }
 
     if (ptrace(PTRACE_CONT, child_pid, 0, 0) < 0) {
         perror("PTRACE_CONT initial");
         return;
     }
 
-    struct sigaction sa = { .sa_handler = sigint_handler, .sa_flags = SA_RESTART };
-    sigemptyset(&sa.sa_mask);
-    sigaction(SIGINT, &sa, NULL);
-
-    printf("Spy attached (PID %d). Child is running freely.\n", child_pid);
-    printf("Press Ctrl-C to inspect.\n\n");
+    printf("Spy attached (PID %d). Child is running in the foreground.\n", child_pid);
+    printf("Press Ctrl-C to inspect the current execution state.\n\n");
 
     while (1) {
-        /* Heartbeat so we know the loop is alive */
-        static time_t last_beat = 0;
-        time_t now = time(NULL);
-        if (now != last_beat) {
-            last_beat = now;
+        if (waitpid(child_pid, &status, 0) < 0) {
+            if (errno == EINTR)
+                continue;
+            perror("waitpid");
+            break;
         }
 
-        if (interrupt_flag) {
-            interrupt_flag = 0;
-
-            printf("interrupting\n");
-            if (ptrace(PTRACE_INTERRUPT, child_pid, 0, 0) < 0)
-                perror("PTRACE_INTERRUPT");
-            printf("interrupted\n");
-
-            if (waitpid(child_pid, &status, 0) < 0) {
-                perror("waitpid after INTERRUPT");
-                break;
-            }
-            printf("wait finished\n");
-
-            if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGINT)
-                printf("(SIGINT suppressed for child)\n");
-
-            if (ptrace(PTRACE_GETREGS, child_pid, 0, &regs) == 0) {
-                uintptr_t rip = regs.rip;
-                print_function_name(child_pid, rip);
-                print_disassembly(child_pid, rip);
-            } else {
-                perror("PTRACE_GETREGS");
-            }
-
-            printf("\n--- Resuming child ---\n\n");
-            ptrace(PTRACE_CONT, child_pid, 0, 0);
+        if (WIFEXITED(status)) {
+            printf("Child exited with status %d\n", WEXITSTATUS(status));
+            break;
+        }
+        if (WIFSIGNALED(status)) {
+            printf("Child terminated by signal %d\n", WTERMSIG(status));
+            break;
         }
 
-        if (waitpid(child_pid, &status, WNOHANG) > 0) {
-            if (WIFEXITED(status)) {
-                printf("Child exited with status %d\n", WEXITSTATUS(status));
-                break;
+        if (WIFSTOPPED(status)) {
+            int stopsig = WSTOPSIG(status);
+
+            /* Regain terminal control immediately (tracer is allowed to do this
+               even while backgrounded because we ignore SIGTTIN/SIGTTOU) */
+            if (tty_fd >= 0) {
+                tcsetpgrp(tty_fd, getpgrp());
             }
-            if (WIFSIGNALED(status)) {
-                printf("Child terminated by signal %d\n", WTERMSIG(status));
+
+            if (stopsig == SIGINT) {
+                /* This is the GDB-style Ctrl-C stop: SIGINT was delivered to the child
+                   via the terminal driver and intercepted by ptrace */
+                printf("\n=== Child stopped by SIGINT (Ctrl-C from user) ===\n");
+
+                if (ptrace(PTRACE_GETREGS, child_pid, 0, &regs) == 0) {
+                    uintptr_t rip = regs.rip;
+                    print_function_name(child_pid, rip);
+                    print_disassembly(child_pid, rip);
+                } else {
+                    perror("PTRACE_GETREGS");
+                }
+
+                printf("\n--- Resuming child (SIGINT will be suppressed) ---\n\n");
+
+                /* Return terminal to child before continuing */
+                if (tty_fd >= 0) {
+                    tcsetpgrp(tty_fd, child_pgid);
+                }
+
+                /* Continue without delivering SIGINT (mirrors GDB's default SIGINT handling) */
+                if (ptrace(PTRACE_CONT, child_pid, 0, 0) < 0) {
+                    perror("PTRACE_CONT resume");
+                    break;
+                }
+                continue;
+            }
+
+            /* Other stop signals are passed through */
+            printf("Child stopped by signal %d\n", stopsig);
+            if (ptrace(PTRACE_CONT, child_pid, 0, stopsig) < 0) {
+                perror("PTRACE_CONT with signal");
                 break;
             }
         }
     }
+
+    cleanup_terminal();
 }
 
 int main(int argc, char *argv[]) {
@@ -141,16 +156,47 @@ int main(int argc, char *argv[]) {
     }
 
     if (child_pid == 0) {
+        /* Child becomes its own process-group leader */
         setpgid(0, 0);
         execvp(child_exec, child_args);
         perror("execvp");
         _exit(1);
     }
 
+    /* === Tracer (debugger) side only === */
+
+    /* Tracer must be in its own process group (separate from shell and child) */
+    setpgid(0, 0);
+    tracer_pgid = getpgrp();
+
+    /* Ignore terminal job-control signals so the tracer is never stopped when
+       it is backgrounded and needs to call tcsetpgrp() to regain the terminal */
+    signal(SIGTTIN, SIG_IGN);
+    signal(SIGTTOU, SIG_IGN);
+
+    /* Ignore SIGINT so Ctrl-C is never delivered to the tracer */
+    signal(SIGINT, SIG_IGN);
+
+    child_pgid = child_pid;
+
+    /* Attach using SEIZE (modern, non-stopping attach) */
     if (ptrace(PTRACE_SEIZE, child_pid, 0, 0) < 0) {
         perror("PTRACE_SEIZE");
         return EXIT_FAILURE;
     }
+
+    /* Open the controlling terminal for foreground-process-group switching */
+    tty_fd = open("/dev/tty", O_RDWR | O_NOCTTY);
+    if (tty_fd >= 0) {
+        original_fg_pgrp = tcgetpgrp(tty_fd);
+        if (original_fg_pgrp < 0) {
+            close(tty_fd);
+            tty_fd = -1;
+        }
+    }
+
+    /* Ensure the terminal state is restored even if the program is terminated abnormally */
+    atexit(cleanup_terminal);
 
     run_tracer();
     return EXIT_SUCCESS;
