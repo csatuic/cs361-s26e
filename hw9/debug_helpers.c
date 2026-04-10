@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <stdint.h>
+#include "debug_helpers.h"
 
 ssize_t read_tracee_memory(pid_t pid, uintptr_t addr, void *buf, size_t len) {
     size_t i = 0;
@@ -107,4 +108,94 @@ void print_disassembly(pid_t pid, uintptr_t rip) {
 
     cs_free(insn, count);
     cs_close(&handle);
+}
+
+static int globals_callback(Dwfl_Module *module, void**, const char *name, Dwarf_Addr addr, void *arg)
+{
+    GlobalVar **list_ptr = arg;
+    GlobalVar *list = *list_ptr;
+    int *count_ptr = (int *)(((char*)arg) + sizeof(GlobalVar**));
+    int *count = count_ptr;
+    int *capacity_ptr = (int *)(((char*)arg) + 2*sizeof(GlobalVar**));
+    int *capacity = capacity_ptr;
+
+    int i = 0;
+    GElf_Sym sym;
+    const char *sym_name;
+
+    while ((sym_name = dwfl_module_getsym(module, i++, &sym, NULL)) != NULL) {
+//        GElf_Sym sym;
+        // if (dwfl_module_getsym_info(module, i-1, &sym, NULL, NULL, NULL, NULL) == NULL)
+        //     continue;
+
+        if (GELF_ST_TYPE(sym.st_info) == STT_OBJECT &&
+            GELF_ST_BIND(sym.st_info) == STB_GLOBAL) {
+
+            if (*count >= *capacity) {
+                *capacity *= 2;
+                GlobalVar *new_list = realloc(list, *capacity * sizeof(GlobalVar));
+                if (!new_list) return -1;
+                list = new_list;
+                *list_ptr = list;
+            }
+
+            printf("found %s\n",sym_name);
+            list[*count].name    = strdup(sym_name);
+            list[*count].address = (uintptr_t)addr;
+            list[*count].size    = sym.st_size;
+            (*count)++;
+        }
+    }
+    return 0;
+}
+
+
+int get_globals(pid_t pid, GlobalVar **out_list, int *out_count)
+{
+    Dwfl *dwfl = NULL;
+    GlobalVar *list = NULL;
+    int count = 0;
+    int capacity = 64;
+
+    *out_list = NULL;
+    *out_count = 0;
+
+    list = calloc(capacity, sizeof(GlobalVar));
+    if (!list) return -1;
+
+    static Dwfl_Callbacks callbacks = {
+        .find_elf       = dwfl_linux_proc_find_elf,
+        .find_debuginfo = dwfl_standard_find_debuginfo
+    };
+
+    dwfl = dwfl_begin(&callbacks);
+    if (!dwfl) goto fail;
+
+    if (dwfl_linux_proc_attach(dwfl, pid, true) != 0 ||
+        dwfl_linux_proc_report(dwfl, pid) != 0)
+        goto fail;
+
+    /* Use the stable callback API instead of dwfl_module_next */
+    void *args[3] = { &list, &count, &capacity };
+    if (dwfl_getmodules(dwfl, globals_callback, args, 0) == -1)
+        goto fail;
+
+    *out_list  = list;
+    *out_count = count;
+    dwfl_end(dwfl);
+    return 0;
+
+fail:
+    printf("failed\n");
+    if (dwfl) dwfl_end(dwfl);
+    free_globals(list, count);
+    return -1;
+}
+
+void free_globals(GlobalVar *list, int count)
+{
+    if (!list) return;
+    for (int i = 0; i < count; i++)
+        free(list[i].name);
+    free(list);
 }

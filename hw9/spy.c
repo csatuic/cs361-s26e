@@ -34,6 +34,21 @@ static void cleanup_terminal(void) {
     }
 }
 
+void print_globals() {
+    GlobalVar *globals = NULL;
+    int nglobals = 0;
+
+    if (get_globals(child_pid, &globals, &nglobals) == 0) {
+        printf("got %d globals\n",nglobals);
+        for (int i = 0; i < nglobals; i++) {
+            /* Later you can read the value with PTRACE_PEEKDATA */
+            printf("%-30s 0x%016lx  (%zu bytes)\n",
+                globals[i].name, globals[i].address, globals[i].size);
+        }
+        free_globals(globals, nglobals);
+    }
+}
+
 static void run_tracer(void) {
     int status;
     struct user_regs_struct regs;
@@ -96,6 +111,7 @@ static void run_tracer(void) {
                     uintptr_t rip = regs.rip;
                     print_function_name(child_pid, rip);
                     print_disassembly(child_pid, rip);
+                    print_globals();
                 } else {
                     perror("PTRACE_GETREGS");
                 }
