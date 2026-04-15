@@ -27,6 +27,42 @@ ssize_t read_tracee_memory(pid_t pid, uintptr_t addr, void *buf, size_t len) {
     }
     return (ssize_t)len;
 }
+
+const char* get_function_name(pid_t pid, uintptr_t addr) {
+    Dwfl *dwfl = NULL;
+    Dwfl_Module *module = NULL;
+    const char *func_name = NULL;
+    const char *module_name = "unknown";
+
+    static Dwfl_Callbacks callbacks = {
+        .find_elf        = dwfl_linux_proc_find_elf,
+        .find_debuginfo  = dwfl_standard_find_debuginfo
+    };
+
+    dwfl = dwfl_begin(&callbacks);
+    if (!dwfl)
+        goto out;
+
+    /* Attach to the live process and report all loaded modules */
+    if (dwfl_linux_proc_attach(dwfl, pid, true) != 0 ||
+        dwfl_linux_proc_report(dwfl, pid) != 0) {
+        goto out;
+    }
+
+    module = dwfl_addrmodule(dwfl, addr);
+    if (module) {
+        func_name = dwfl_module_addrname(module, addr);
+        dwfl_module_info(module, NULL, NULL, NULL, NULL, NULL, &module_name, NULL);
+    }
+
+out:
+    if (dwfl)
+        dwfl_end(dwfl);
+
+    return func_name;
+}
+
+
 void print_function_name(pid_t pid, uintptr_t addr) {
     Dwfl *dwfl = NULL;
     Dwfl_Module *module = NULL;
@@ -65,7 +101,10 @@ void print_function_name(pid_t pid, uintptr_t addr) {
 out:
     if (dwfl)
         dwfl_end(dwfl);
+
 }
+
+
 
 void print_disassembly(pid_t pid, uintptr_t rip) {
     csh handle;
