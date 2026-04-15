@@ -15,12 +15,16 @@ Limit the print to globals in the executable. You can use the `realpath()` funct
 
 Then, use the `PTRACE_PEEKDATA` command to read the value of each global variable, and print it in hexadecimal after the symbol name. 
 Keep in mind that different variables may have different size. 
+However, for simplicity, you may assume the size is a multiple of 8 bytes, so you can use the `%016llx` printf format string. 
 
 *Demonstrate:* the program running on the test tracee as before, but prints only the globals of the tracee ()
 
 ### Lab step 2. Add a small command interface
 
 Instead of immediately printing data about the tracee on Ctrl-C wait for a single character input from the user. 
+You can implement this any way you want, but one easy way is to `read()`
+2 bytes: one for the command, and one for `<newline>`.
+
 Accept the following commands:
 
 | key | Action |
