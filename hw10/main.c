@@ -40,7 +40,6 @@ static void print_usage(const char *progname) {
 }
 
 static void orchestrate_analysis(const char *filename, int comprehensive) {
-    // Step 1 bug: artificial long sleep
     sleep(8);
 
     LogEntry *entries = malloc(MAX_ENTRIES * sizeof(LogEntry));

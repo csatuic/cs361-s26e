@@ -25,12 +25,11 @@ void generate_report(LogEntry *entries, int count, int comprehensive) {
 }
 
 void print_report_line_by_line(const char *text) {
-    // Severe bug: character-at-a-time write (Step 2)
     if (!text) return;
     size_t len = strlen(text);
     for (size_t i = 0; i < len; i++) {
         char ch = text[i];
-        write(1, &ch, 1);  // one syscall per character
+        write(1, &ch, 1);  
     }
 }
 
