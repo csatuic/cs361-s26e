@@ -17,11 +17,6 @@ void generate_report(LogEntry *entries, int count, int comprehensive) {
     aggregate_hourly_stats(entries, count, hourly);
     print_hourly_breakdown(hourly);
 
-    if (comprehensive) {
-        int matrix[5][5];
-        build_event_correlations(entries, count, matrix);
-        print_correlation_matrix(matrix);
-    }
 }
 
 void print_report_line(const char *text) {

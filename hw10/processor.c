@@ -20,11 +20,6 @@ int filter_entries(LogEntry *entries, int count, int min_severity, time_t start_
     return new_count;
 }
 
-double compute_severity_score(const LogEntry *entry) {
-    sleep(1);
-    return sqrt((double)entry->severity + 1.0);
-}
-
 void build_event_correlations(LogEntry *entries, int count, int correlation_matrix[][5]) {
     memset(correlation_matrix, 0, sizeof(int) * 5 * 5);
     for (int i = 0; i < count; i++) {

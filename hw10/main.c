@@ -58,9 +58,6 @@ static void orchestrate_analysis(const char *filename, int comprehensive) {
     sanitize_entries(entries, count);
     count = filter_entries(entries, count, 0, 0, time(NULL) + 86400);
 
-    int correlation_matrix[5][5];
-    build_event_correlations(entries, count, correlation_matrix);  
-
     for (int i = 0; i < count; i += 50) {        
         compute_severity_score(&entries[i]);
     }
@@ -71,6 +68,10 @@ static void orchestrate_analysis(const char *filename, int comprehensive) {
     }
 
     generate_report(entries, count, comprehensive);
+
+    int matrix[5][5];
+    build_event_correlations(entries, count, matrix);
+    print_correlation_matrix(matrix);
 
     free(entries);
 }
