@@ -67,11 +67,12 @@ static void orchestrate_analysis(const char *filename, int comprehensive) {
         compute_detailed_statistics(entries, count, 1);  
     }
 
-    generate_report(entries, count, comprehensive);
-
     int matrix[5][5];
     build_event_correlations(entries, count, matrix);
     print_correlation_matrix(matrix);
+
+    generate_report(entries, count, comprehensive);
+
 
     free(entries);
 }
