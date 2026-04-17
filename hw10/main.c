@@ -54,15 +54,20 @@ static void orchestrate_analysis(const char *filename, int comprehensive) {
         return;
     }
 
-    // Parsing and processing pipeline
-    count = parse_log_entries(filename, entries, MAX_ENTRIES);  // re-parses for demonstration
+    count = parse_log_entries(filename, entries, MAX_ENTRIES);
     sanitize_entries(entries, count);
     count = filter_entries(entries, count, 0, 0, time(NULL) + 86400);
 
-    // Comprehensive mode triggers object files
+    int correlation_matrix[5][5];
+    build_event_correlations(entries, count, correlation_matrix);  
+
+    for (int i = 0; i < count; i += 50) {        
+        compute_severity_score(&entries[i]);
+    }
+
     if (comprehensive) {
-        process_log_batch(entries, count);               // from log_processor.o
-        compute_detailed_statistics(entries, count, 1);  // from statistics_generator.o
+        process_log_batch(entries, count);              
+        compute_detailed_statistics(entries, count, 1);  
     }
 
     generate_report(entries, count, comprehensive);
