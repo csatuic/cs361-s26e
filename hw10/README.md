@@ -20,4 +20,8 @@ Even with the above bug eliminated, the program takes its sweet time generating 
 Run the program with `time` again to see what is up now. 
 
 The measurements suggest we're spending a lot of time working on system calls, not just waiting. 
-Find out which system calls we are making and how much time they are taking, using `strace -c`.
+Find out which system calls we are making and how much time they are taking, using `strace -c`. You'll find that one particular system call is using up about 80% of the time. 
+
+Use `strace -k -e` again, to track down and kill this bug. 
+
+### 
