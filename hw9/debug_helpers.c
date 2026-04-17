@@ -28,7 +28,7 @@ ssize_t read_tracee_memory(pid_t pid, uintptr_t addr, void *buf, size_t len) {
     return (ssize_t)len;
 }
 
-const char* get_function_name(pid_t pid, uintptr_t addr) {
+const char* get_function_name(pid_t pid, uintptr_t addr, char* buf, size_t buflen) {
     Dwfl *dwfl = NULL;
     Dwfl_Module *module = NULL;
     const char *func_name = NULL;
@@ -52,16 +52,21 @@ const char* get_function_name(pid_t pid, uintptr_t addr) {
     module = dwfl_addrmodule(dwfl, addr);
     if (module) {
         func_name = dwfl_module_addrname(module, addr);
+        if(func_name) {
+            strncpy(buf, func_name, buflen);
+        }
+        else {
+            sprintf(buf,"<Function at address %p>",(void*)addr);
+        }
         dwfl_module_info(module, NULL, NULL, NULL, NULL, NULL, &module_name, NULL);
     }
-
+    
 out:
     if (dwfl)
         dwfl_end(dwfl);
 
-    return func_name;
+    return buf;
 }
-
 
 void print_function_name(pid_t pid, uintptr_t addr) {
     Dwfl *dwfl = NULL;

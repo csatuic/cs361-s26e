@@ -11,7 +11,7 @@
 #include <time.h>
 
 static void print_usage(const char *progname);
-static void orchestrate_analysis(const char *filename, int comprehensive);
+void orchestrate_analysis(const char *filename, int comprehensive);
 
 int main(int argc, char **argv) {
     int comprehensive = 0;
@@ -39,7 +39,8 @@ static void print_usage(const char *progname) {
     printf("  --comprehensive : Enable deeper analysis (triggers object-file functions)\n");
 }
 
-static void orchestrate_analysis(const char *filename, int comprehensive) {
+__attribute((noinline))__
+void orchestrate_analysis(const char *filename, int comprehensive) {
     sleep(8);
 
     LogEntry *entries = malloc(MAX_ENTRIES * sizeof(LogEntry));
