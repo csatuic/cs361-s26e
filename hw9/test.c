@@ -35,6 +35,7 @@ int main(int argc, char** argv) {
 
 	fprintf(surprise,"%s\n",roasts[rand()%10]);
 	fclose(surprise);
-	
+
 	sleep(10);
+
 }

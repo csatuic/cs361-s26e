@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <time.h>
+#include <sys/time.h>
 #include "debug_helpers.h"
 
 static pid_t child_pid = -1;
@@ -34,24 +35,37 @@ static void cleanup_terminal(void) {
     }
 }
 
-void print_globals() {
+void print_globals(char* binary) {
     GlobalVar *globals = NULL;
     int nglobals = 0;
 
     if (get_globals(child_pid, &globals, &nglobals) == 0) {
-        printf("got %d globals\n",nglobals);
-        for (int i = 0; i < nglobals; i++) {
+        for (int i = 0; i < nglobals; i++) {            
             /* Later you can read the value with PTRACE_PEEKDATA */
-            printf("%-10s %-30s 0x%016lx  (%zu bytes)\n",
-                globals[i].module_name, globals[i].name, globals[i].address, globals[i].size);
+            if(strcmp(binary,globals[i].module_name)==0) {
+
+                printf("%-10s %-30s 0x%016lx  (%zu bytes): ",
+                    globals[i].module_name, globals[i].name, globals[i].address, globals[i].size);
+
+                errno=0;
+                int peekresult=ptrace(PTRACE_PEEKDATA, child_pid, globals[i].address, 0);
+                if(peekresult==-1 && errno) {
+                    perror("ERROR PEEKING\n");
+                    exit(1);
+                }
+                printf("%x\n",peekresult);
+            }
+
         }
         free_globals(globals, nglobals);
     }
 }
 
-static void run_tracer(void) {
+
+static void run_tracer(char* binary) {
     int status;
     struct user_regs_struct regs;
+    int function_stepping = 0;
 
     /* Force initial stop after SEIZE */
     if (ptrace(PTRACE_INTERRUPT, child_pid, 0, 0) < 0)
@@ -102,30 +116,80 @@ static void run_tracer(void) {
                 tcsetpgrp(tty_fd, getpgrp());
             }
 
-            if (stopsig == SIGINT) {
-                /* This is the GDB-style Ctrl-C stop: SIGINT was delivered to the child
-                   via the terminal driver and intercepted by ptrace */
-                printf("\n=== Child stopped by SIGINT (Ctrl-C from user) ===\n");
+            if (stopsig == SIGALRM) {
+//                printf("Got alarm from child!\n");
 
-                if (ptrace(PTRACE_GETREGS, child_pid, 0, &regs) == 0) {
-                    uintptr_t rip = regs.rip;
-                    print_function_name(child_pid, rip);
-                    print_disassembly(child_pid, rip);
-                    print_globals();
-                } else {
-                    perror("PTRACE_GETREGS");
-                }
-
-                printf("\n--- Resuming child (SIGINT will be suppressed) ---\n\n");
-
-                /* Return terminal to child before continuing */
+                  /* Return terminal to child before continuing */
                 if (tty_fd >= 0) {
                     tcsetpgrp(tty_fd, child_pgid);
                 }
 
                 /* Continue without delivering SIGINT (mirrors GDB's default SIGINT handling) */
-                if (ptrace(PTRACE_CONT, child_pid, 0, 0) < 0) {
+                if (ptrace((function_stepping?PTRACE_SINGLESTEP:PTRACE_CONT), child_pid, 0, 0) < 0) {
                     perror("PTRACE_CONT resume");
+                    break;
+                }
+                continue;
+            }
+
+            if (stopsig == SIGINT || stopsig == SIGTRAP) {
+                /* This is the GDB-style Ctrl-C stop: SIGINT was delivered to the child
+                   via the terminal driver and intercepted by ptrace */
+                if(!function_stepping) {
+                    printf("\n$: ");
+                    fflush(stdout);
+                    char cmd[10];
+                    if(read(0,cmd,10)!=2) {
+                        printf("One-character commands please.");
+                        exit(1);                    
+                    }                
+
+                    if (ptrace(PTRACE_GETREGS, child_pid, 0, &regs) == 0) {
+                        uintptr_t rip = regs.rip;
+
+                        switch(cmd[0]) {
+                        case 'f': 
+                        print_function_name(child_pid, rip);
+                            break;
+                        case 'd': 
+                        print_disassembly(child_pid, rip);
+                        break;
+                        case 'g':
+                        print_globals(binary);
+                        break;
+                        case 'x':
+                        kill(SIGKILL,child_pid);
+                        exit(0);
+                        break;
+                        case 'c':
+                        break;
+                        case 'n':
+                            char buf[100];
+                            printf("Function is %s\n", get_function_name(child_pid, rip, buf, 100));
+                            function_stepping=1;
+                            break;
+                        default: printf("Unknown command\n");
+                        }
+                    } else {
+                        perror("PTRACE_GETREGS");
+                    }
+                }
+                else {
+                    if (ptrace(PTRACE_GETREGS, child_pid, 0, &regs) == 0) {
+                        uintptr_t rip = regs.rip;
+                        char buf[100];
+                        memset(buf,0,100);
+                        printf("Function is %s\n", get_function_name(child_pid, rip, buf, 100));
+                    }
+                }
+
+                /* Return terminal to child before continuing */
+                if (tty_fd >= 0) {
+                    tcsetpgrp(tty_fd, child_pgid);
+                }
+                /* Continue without delivering SIGINT (mirrors GDB's default SIGINT handling) */
+                if (ptrace((function_stepping?PTRACE_SINGLESTEP:PTRACE_CONT), child_pid, 0, 0) < 0) {
+                    perror("PTRACE_SINGLETRACE/CONT resume");
                     break;
                 }
                 continue;
@@ -178,6 +242,14 @@ int main(int argc, char *argv[]) {
     if (child_pid == 0) {
         /* Child becomes its own process-group leader */
         setpgid(0, 0);
+        struct itimerval timer;
+        getitimer(ITIMER_REAL, &timer);
+        timer.it_value.tv_sec = 1;
+        timer.it_interval.tv_sec = 1; // every second
+        if(setitimer(ITIMER_REAL, &timer, 0)) {
+            perror("timer problem");
+        }
+
         execvp(child_exec, child_args);
         perror("execvp");
         _exit(1);
@@ -218,6 +290,6 @@ int main(int argc, char *argv[]) {
     /* Ensure the terminal state is restored even if the program is terminated abnormally */
     atexit(cleanup_terminal);
 
-    run_tracer();
+    run_tracer(realpath(child_exec,0));
     return EXIT_SUCCESS;
 }
