@@ -71,8 +71,9 @@ Go to the bytes you want to change (or search for the exact instruction bytes us
 ### Remaining Step 5: normalize_field is taking too much time
 
 Having eliminated the step 4 inefficiency, you'll now find that a function called `normalize_field` is consuming most of the remaining time. Use the tools discussed in class and mentioned above to work out what function is calling `normalize_field` so much.
+To get more samples, consider using the `1k.txt` or `10k.txt` file instead of the `100.txt`. 
 
-Unfortunately, you'll find that this function is also in a binary, with the source code lost to time and poor revision control and backup hygiene. Here, trying to replace the function is a lot harder, since it's being called from many places. 
+Unfortunately, you'll find that the offending function is also in a binary, with the source code lost to time and poor revision control and backup hygiene. Here, trying to replace the function is a lot harder, since it's being called from many places. 
 
 Instead, work out what the function does, and see if you can safely reduce the number of calls to it, without changing the actual behavior of the program. Eliminating redundant calls to this function should give you 90\% of the gains with 10\% of the effort.
 
