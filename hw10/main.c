@@ -39,6 +39,7 @@ static void print_usage(const char *progname) {
     printf("  --comprehensive : Enable deeper analysis (triggers object-file functions)\n");
 }
 
+__attribute__((noinline))
 void orchestrate_analysis(const char *filename, int comprehensive) {
     sleep(8);
 
@@ -61,7 +62,7 @@ void orchestrate_analysis(const char *filename, int comprehensive) {
 
     if (comprehensive) {
         for (int i = 0; i < count; i += 50) {        
-            compute_severity_score(&entries[i]);
+            count+=compute_severity_score(entries[i].severity);
         }
         process_log_batch(entries, count);              
         compute_detailed_statistics(entries, count, 1);  
