@@ -41,7 +41,6 @@ static void print_usage(const char *progname) {
 
 __attribute__((noinline))
 void orchestrate_analysis(const char *filename, int comprehensive) {
-    sleep(8);
 
     LogEntry *entries = malloc(MAX_ENTRIES * sizeof(LogEntry));
     if (!entries) {
